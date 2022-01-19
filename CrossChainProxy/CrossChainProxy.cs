@@ -17,25 +17,25 @@ namespace CrossChainProxy
     public class CrossChainProxy : SmartContract
     {
 
-        [InitialValue("44baf1fac6dc465d6318e84911fd9bf536c5d6fd", ContractParameterType.ByteArray)] // little endian
+        [InitialValue("2a774fa0404f020254f6db20616cf13adc448d61", ContractParameterType.ByteArray)] // little endian // MainNet: b9fa24b949d84a8a023fabe9856aa8c543c5a65b
         private static readonly byte[] CCMCScriptHash = default;
 
-        [InitialValue("NYxb4fSZVKAz8YsgaPK2WkT3KcAE9b3Vag", ContractParameterType.Hash160)]
+        [InitialValue("NUVHSYuSqAHHNpVyeVR2KkggHNiw5DD2nN", ContractParameterType.Hash160)]
         private static readonly UInt160 owner = default;
         private static readonly byte[] ownerKey = new byte[] { 0x01, 0x01 };
         private static readonly byte[] operatorKey = new byte[] { 0x01, 0x02 };
         private static readonly byte[] pauseKey = new byte[] { 0x01, 0x03 };
         private static readonly byte[] proxyAddressPrefix = new byte[] { 0x01, 0x04 };
         private static readonly byte[] assetAddressPrefix = new byte[] { 0x01, 0x05 };
-        private static readonly BigInteger thisChainId = 44;
-        private static readonly BigInteger targetChainId = 5; // TestNet: 198
+        private static readonly BigInteger thisChainId = 88; // MainNet: 14
+        private static readonly BigInteger targetChainId = 198; // MainNet: 5
 
         // Events
+        public static event Action<byte[], UInt160> DeployEvent;
         public static event Action<UInt160> TransferOwnershipEvent;
         public static event Action<UInt160, BigInteger, byte[], byte[]> RegisterAssetEvent;
         public static event Action<UInt160, UInt160, BigInteger, byte[], byte[], BigInteger> LockEvent;
         public static event Action<UInt160, UInt160, BigInteger> UnlockEvent;
-        public static event Action<byte[], UInt160> DeployEvent;
         public static event Action<object> notify;
 
         public static void _deploy(object data, bool update)
@@ -57,7 +57,7 @@ namespace CrossChainProxy
 
         public static bool TransferOwnership(UInt160 newOwner)
         {
-            Assert(newOwner.Length == 20, "transferOwnership: newOwner.Length != 20");
+            Assert(newOwner.Length == 20, "transferOwnership: newOwner must be 20-byte long");
             Assert(IsOwner(), "transferOwnership: not owner");
             Storage.Put(Storage.CurrentContext, ownerKey, newOwner);
 
