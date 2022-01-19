@@ -106,14 +106,14 @@ namespace CrossChainProxy
 
         public static bool Pause(UInt160 operatorAddress)
         {
-            Assert(IsOperator(operatorAddress), "pause: not owner");
+            Assert(IsOwner() || IsOperator(operatorAddress), "pause: not owner or operator");
             Storage.Put(Storage.CurrentContext, pauseKey, new byte[] { 0x01 });
             return true;
         }
 
         public static bool Unpause(UInt160 operatorAddress)
         {
-            Assert(IsOperator(operatorAddress), "unpause: not owner");
+            Assert(IsOwner() || IsOperator(operatorAddress), "unpause: not owner or operator");
             Storage.Delete(Storage.CurrentContext, pauseKey);
             return true;
         }
