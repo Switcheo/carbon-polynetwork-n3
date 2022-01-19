@@ -33,15 +33,16 @@ namespace CrossChainProxy
         // Events
         public static event Action<UInt160> TransferOwnershipEvent;
         public static event Action<UInt160, BigInteger, byte[], byte[]> RegisterAssetEvent;
-        public static event Action<byte[], byte[], BigInteger, UInt160, byte[], BigInteger> LockEvent;
-        public static event Action<byte[], ByteString, BigInteger> UnlockEvent;
-        public static event Action<byte[], UInt160> OnDeploy;
+        public static event Action<UInt160, UInt160, BigInteger, byte[], byte[], BigInteger> LockEvent;
+        public static event Action<UInt160, UInt160, BigInteger> UnlockEvent;
+        public static event Action<byte[], UInt160> DeployEvent;
         public static event Action<object> notify;
 
         public static void _deploy(object data, bool update)
         {
             Storage.Put(Storage.CurrentContext, ownerKey, owner);
-            OnDeploy(ownerKey, owner);
+
+            DeployEvent(ownerKey, owner);
         }
 
         /*
@@ -57,22 +58,23 @@ namespace CrossChainProxy
         public static bool TransferOwnership(UInt160 newOwner)
         {
             Assert(newOwner.Length == 20, "transferOwnership: newOwner.Length != 20");
-            Assert(IsOwner(), "transferOwnership: CheckWitness failed!");
+            Assert(IsOwner(), "transferOwnership: not owner");
             Storage.Put(Storage.CurrentContext, ownerKey, newOwner);
+
             TransferOwnershipEvent(newOwner);
             return true;
         }
 
         public static bool SetOperator(UInt160 operatorAddress)
         {
-            Assert(IsOwner(), "check superAdmin fail");
+            Assert(IsOwner(), "setOperator: not owner");
             Storage.Put(Storage.CurrentContext, operatorKey.Concat(operatorAddress), 1);
             return true;
         }
 
         public static bool RemoveOperator(UInt160 operatorAddress)
         {
-            Assert(IsOwner(), "check superAdmin fail");
+            Assert(IsOwner(), "removeOperator: not owner");
             Storage.Delete(Storage.CurrentContext, operatorKey.Concat(operatorAddress));
             return true;
         }
@@ -80,7 +82,7 @@ namespace CrossChainProxy
         // used to upgrade this proxy contract
         public static bool Update(ByteString nefFile, string manifest)
         {
-            Assert(IsOwner(), "upgrade: CheckWitness failed!");
+            Assert(IsOwner(), "update: not owner");
             ContractManagement.Update(nefFile, manifest);
             return true;
         }
@@ -104,14 +106,14 @@ namespace CrossChainProxy
 
         public static bool Pause(UInt160 operatorAddress)
         {
-            Assert(IsOperator(operatorAddress), "pause: CheckWitness failed!");
+            Assert(IsOperator(operatorAddress), "pause: not owner");
             Storage.Put(Storage.CurrentContext, pauseKey, new byte[] { 0x01 });
             return true;
         }
 
         public static bool Unpause(UInt160 operatorAddress)
         {
-            Assert(IsOperator(operatorAddress), "unpause: CheckWitness failed!");
+            Assert(IsOperator(operatorAddress), "unpause: not owner");
             Storage.Delete(Storage.CurrentContext, pauseKey);
             return true;
         }
@@ -128,14 +130,21 @@ namespace CrossChainProxy
         public static bool RegisterAsset(byte[] inputBytes, byte[] targetProxyAddress, BigInteger chainId)
         {
             Assert(!IsPaused(), "lock: proxy is paused");
-            Assert(Runtime.CallingScriptHash == (UInt160)CCMCScriptHash, "registerAsset: Only allowed to be called by CCMC.");
-            Assert(chainId == targetChainId, "registerAsset: wrong chain id.");
+            Assert(Runtime.CallingScriptHash == (UInt160)CCMCScriptHash, "registerAsset: only allowed to be called by CCMC");
+            Assert(chainId == targetChainId, "registerAsset: wrong chain id");
+
             object[] results = DeserializeRegisterAssetArgs(inputBytes);
             var targetAssetAddress = (byte[])results[0];
             var thisAssetAddress = (UInt160)results[1];
 
+            Assert(targetAssetAddress.Length > 0, "registerAsset: target asset address is empty");
+            Assert(thisAssetAddress.Length == 20, "registerAsset: thisAssetAddress must be 20-byte long");
             // Make sure fromAssetAddress has balanceOf method
             BigInteger balance = GetAssetBalance(thisAssetAddress);
+
+            // Make sure not already registered
+            Assert(GetAssetAddress(thisAssetAddress).Length == 0, "registerAsset: asset address already registered");
+            Assert(GetProxyAddress(thisAssetAddress).Length == 0, "registerAsset: proxy address already registered");
 
             // add mapping for this asset => target address
             Storage.Put(Storage.CurrentContext, assetAddressPrefix.Concat(thisAssetAddress), targetAssetAddress);
@@ -144,17 +153,19 @@ namespace CrossChainProxy
             Storage.Put(Storage.CurrentContext, proxyAddressPrefix.Concat(thisAssetAddress), targetProxyAddress);
 
             RegisterAssetEvent(thisAssetAddress, targetChainId, targetProxyAddress, targetAssetAddress);
-
-          return true;
+            return true;
         }
 
         // used to lock asset into proxy contract
-        public static bool Lock(byte[] fromAssetAddress, byte[] fromAddress, byte[] toAddress, BigInteger amount, BigInteger feeAmount, byte[] feeAddress, BigInteger nonce)
+        public static bool Lock(UInt160 fromAssetAddress, UInt160 fromAddress, byte[] toAddress, BigInteger amount, BigInteger feeAmount, byte[] feeAddress, BigInteger nonce)
         {
             Assert(!IsPaused(), "lock: proxy is paused");
-            Assert(fromAssetAddress.Length == 20, "lock: fromAssetAddress SHOULD be 20-byte long.");
-            Assert(fromAddress.Length == 20, "lock: fromAddress SHOULD be 20-byte long.");
-            Assert(amount > 0, "lock: amount SHOULD be greater than 0.");
+            Assert(fromAssetAddress.Length == 20, "lock: fromAssetAddress must be 20-byte long");
+            Assert(fromAddress.Length == 20, "lock: fromAddress must be 20-byte long");
+            Assert(toAddress.Length == 0, "lock: toAddress cannot be empty");
+            Assert(amount > 0, "lock: amount must be greater than 0");
+            Assert(feeAmount >= 0, "lock: feeAmount must be positive");
+            Assert(feeAmount == 0 || feeAddress.Length > 0, "lock: feeAdress cannot be empty if feeAmount is not zero");
             Assert(!fromAddress.Equals(Runtime.ExecutingScriptHash), "lock: can not lock self");
 
             // get the proxy contract on target chain
@@ -165,46 +176,47 @@ namespace CrossChainProxy
 
             // transfer asset from fromAddress to proxy contract address, use dynamic call to call nep5 token's contract "transfer"
             bool success = (bool)Contract.Call((UInt160)fromAssetAddress, "transfer", CallFlags.All, new object[] { fromAddress, Runtime.ExecutingScriptHash, amount, null });
-            Assert(success, "lock: Failed to transfer NEP5 token to Nep5Proxy.");
+            Assert(success, "lock: failed to transfer NEP5 token to CrossChainProxy");
 
             // construct args for proxy contract on target chain
-            var inputArgs = SerializeLockArgs((byte[])fromAssetAddress, (byte[])toAssetAddress, toAddress, amount, feeAmount, feeAddress, fromAddress, nonce);
+            var inputArgs = SerializeLockArgs((byte[])fromAssetAddress, toAssetAddress, toAddress, amount, feeAmount, feeAddress, (byte[])fromAddress, nonce);
 
             // dynamic call CCMC
             success = (bool)Contract.Call((UInt160)CCMCScriptHash, "crossChain", CallFlags.All, new object[] { targetChainId, toProxyAddress, "unlock", inputArgs, Runtime.ExecutingScriptHash });
-            Assert(success, "lock: Failed to call CCMC.");
+            Assert(success, "lock: failed to call CCMC");
 
-            // Validate payable
             LockEvent(fromAssetAddress, fromAddress, targetChainId, toAssetAddress, toAddress, amount);
-
             return true;
         }
 
         // Methods of actual execution, used to unlock asset from proxy contract
-        public static bool Unlock(byte[] inputBytes, byte[] fromProxyContract, BigInteger fromChainId)
+        public static bool Unlock(byte[] inputBytes, byte[] fromProxyContract, BigInteger chainId)
         {
             Assert(!IsPaused(), "lock: proxy is paused");
-            Assert(Runtime.CallingScriptHash == (UInt160)CCMCScriptHash, "unlock: Only allowed to be called by CCMC.");
+            Assert(Runtime.CallingScriptHash == (UInt160)CCMCScriptHash, "unlock: only allowed to be called by CCMC");
+            Assert(chainId == targetChainId, "registerAsset: wrong chain id");
+            Assert(fromProxyContract.Length > 0, "unlock: fromProxyContract cannot be empty");
 
             // parse the args bytes constructed in source chain proxy contract, passed by multi-chain
             object[] results = DeserializeUnlockArgs(inputBytes);
-            var fromAssetAddress = (byte[])results[0];
-            var toAssetAddress = (byte[])results[1];
+            var fromAssetAddress = (ByteString)results[0];
+            var toAssetAddress = (UInt160)results[1];
             var toAddress = (UInt160)results[2];
             var amount = (BigInteger)results[3];
-            Assert(toAssetAddress.Length == 20, "unlock: toAssetAddress hash SHOULD be 20-byte long.");
-            Assert(toAddress.Length == 20, "unlock: toAddress SHOULD be 20-byte long.");
-            Assert(amount > 0, "unlock: amount SHOULD be greater than 0.");
+            Assert(toAssetAddress.Length == 20, "unlock: toAssetAddress hash must be 20-byte long");
+            Assert(toAddress.Length == 20, "unlock: toAddress must be 20-byte long");
+            Assert(amount > 0, "unlock: amount must be greater than 0");
 
-            UInt160 proxyAddress = GetProxyAddress(toAssetAddress);
-            Assert((ByteString)fromProxyContract == (ByteString)proxyAddress, "unlock: fromProxyContract is invalid");
+            var proxyAddress = GetProxyAddress(toAssetAddress);
+            Assert((UInt160)fromProxyContract == proxyAddress, "unlock: fromProxyContract is invalid");
 
-            UInt160 assetAddress = GetAssetAddress(toAssetAddress);
-            Assert((ByteString)fromAssetAddress == (ByteString)assetAddress, "unlock: fromAssetAddress is invalid");
+            var assetAddress = GetAssetAddress(toAssetAddress);
+            Assert(fromAssetAddress == (ByteString)assetAddress, "unlock: toAssetAddress is invalid");
 
             // transfer asset from proxy contract to toAddress
             bool success = (bool)Contract.Call((UInt160)toAssetAddress, "transfer", CallFlags.All, new object[] { Runtime.ExecutingScriptHash, toAddress, amount, null });
-            Assert(success, "unlock: Failed to transfer NEP5 token From Nep5Proxy to toAddress.");
+            Assert(success, "unlock: failed to transfer NEP5 token From CrossChainProxy to toAddress");
+
             UnlockEvent(toAssetAddress, toAddress, amount);
             return true;
         }
@@ -215,22 +227,21 @@ namespace CrossChainProxy
 
         public static BigInteger GetAssetBalance(UInt160 assetAddress)
         {
-            UInt160 curHash = Runtime.ExecutingScriptHash;
-            BigInteger balance = (BigInteger)Contract.Call(assetAddress, "balanceOf", CallFlags.All, new object[] { curHash });
+            BigInteger balance = (BigInteger)Contract.Call(assetAddress, "balanceOf", CallFlags.All, new object[] { Runtime.ExecutingScriptHash });
             return balance;
         }
 
 
-        // get target proxy contract address according to chain id
-        public static UInt160 GetProxyAddress(byte[] toAssetAddress)
+        // get target proxy contract address according local asset hash
+        public static UInt160 GetProxyAddress(UInt160 thisAssetAddress)
         {
-            return (UInt160)Storage.Get(Storage.CurrentContext, proxyAddressPrefix.Concat(toAssetAddress));
+            return (UInt160)Storage.Get(Storage.CurrentContext, proxyAddressPrefix.Concat(thisAssetAddress));
         }
 
         // get target asset contract address according to local asset hash
-        public static UInt160 GetAssetAddress(byte[] fromAssetAddress)
+        public static byte[] GetAssetAddress(UInt160 thisAssetAddress)
         {
-            return (UInt160)Storage.Get(Storage.CurrentContext, assetAddressPrefix.Concat(fromAssetAddress));
+            return (byte[])Storage.Get(Storage.CurrentContext, assetAddressPrefix.Concat(thisAssetAddress));
         }
 
         /*
@@ -263,14 +274,10 @@ namespace CrossChainProxy
 
         private static (BigInteger, int) ReadUint255(byte[] buffer, int offset)
         {
-            if (offset + 32 > buffer.Length)
-            {
-                notify("Length is not long enough!");
-                throw new ArgumentException();
-            }
+            Assert(offset + 32 <= buffer.Length, "readUint255: buffer length insufficient");
             BigInteger result = new BigInteger(buffer.Range(offset, 32));
             offset = offset + 32;
-            Assert(result >= 0, "result should > 0");//uint255 exceed max size, can not concat 0x00
+            Assert(result >= 0, "readUint255: result should > 0"); //uint255 exceed max size, can not concat 0x00
             return (result, offset);
         }
 
@@ -308,11 +315,7 @@ namespace CrossChainProxy
         // return [byte[], new offset]
         private static (ByteString, int) ReadBytes(byte[] buffer, int offset, int count)
         {
-            if (offset + count > buffer.Length)
-            {
-                notify("read Bytes fail");
-                throw new ArgumentException();
-            }
+            Assert(offset + count <= buffer.Length, "readBytes: buffer length insufficient");
             return ((ByteString)buffer.Range(offset, count), offset + count);
         }
 
@@ -333,7 +336,7 @@ namespace CrossChainProxy
 
         private static byte[] WriteUint255(BigInteger value, byte[] source)
         {
-            Assert(value >= 0, "Value out of range of uint255.");
+            Assert(value >= 0, "writeUint255: value out of range of uint255");
             var v = padRight(value.ToByteArray(), 32);
             return source.Concat(v); // no need to concat length, fix 32 bytes
         }
@@ -342,7 +345,7 @@ namespace CrossChainProxy
         {
             if (value < 0)
             {
-                notify("WVI: value should be positive");
+                notify("writeVarInt: value must be positive");
                 throw new ArgumentException();
             }
             else if (value < 0xFD)
@@ -379,11 +382,9 @@ namespace CrossChainProxy
         private static byte[] padRight(byte[] value, int length)
         {
             var l = value.Length;
-            if (l > length)
-            {
-                notify("size exceed");
-                throw new ArgumentException();
-            }
+
+            Assert(l <= length, "padRight: buffer length exceeded");
+
             for (int i = 0; i < length - l; i++)
             {
                 value = value.Concat(new byte[] { 0x00 });
@@ -421,7 +422,7 @@ namespace CrossChainProxy
         {
             if (!condition)
             {
-                notify((ByteString)"Nep5Proxy ".ToByteArray().Concat(msg.ToByteArray()));
+                notify((ByteString)"CrossChainProxy: ".ToByteArray().Concat(msg.ToByteArray()));
                 throw new InvalidOperationException(msg);
             }
         }
