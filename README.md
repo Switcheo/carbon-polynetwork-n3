@@ -7,7 +7,10 @@ This is the repository contains the  Neo (3.0) deposit and wrapped native token 
 1. Install [.NET 6.0 SDK](https://dotnet.microsoft.com/download)
 2. Install contract compiler and templates: `dotnet new -i Neo3.SmartContract.Templates`
 3. Compile with: `dotnet build`
-4. Deploy with: `deploy ./bin/CrossChainProxy.nef ./bin/CrossChainProxy.manifest`
+4. Install [neo-cli](https://docs.neo.org/docs/en-us/node/cli/setup.html)
+5. Sync to latest height with: `dotnet neo-cli.dll`
+6. In neo-cli, create / open a wallet: `open wallet`
+7. In neo-cli, deploy with: `deploy <pathToSolution>/CrossChainProxy/bin/sc/CrossChainProxy.nef <pathToSolution>/CrossChainProxy/bin/sc/CrossChainProxy.manifest.json`
 
 For more information, see the [Neo 3.0 docs](https://docs.neo.org/docs/en-us/gettingstarted/develop.html).
 
@@ -16,7 +19,7 @@ For more information, see the [Neo 3.0 docs](https://docs.neo.org/docs/en-us/get
 ### Devnet
 
 - Address: TBD
-- Big Endian ScriptHash: TBD
+- Big Endian ScriptHash: 0xeeebee7ef57cb2106fbad2c51c5b9b4c30f0c0ca
 - Little Endian ScriptHash: TBD
 
 ### Mainnet

@@ -10,14 +10,18 @@ using Neo.SmartContract.Framework.Services;
 
 namespace CrossChainProxy
 {
-    [DisplayName("CrossChainProxy")]
+    [ContractPermission("*", "*")]
+    [DisplayName("CrossChainProxyCarbon")]
     [ManifestExtra("Author", "Switcheo Labs")]
     [ManifestExtra("Email", "engineering@switcheo.network")]
     [ManifestExtra("Description", "This is the CrossChainProxy for Polynetwork to Carbon")]
     public class CrossChainProxy : SmartContract
     {
 
-        [InitialValue("2a774fa0404f020254f6db20616cf13adc448d61", ContractParameterType.ByteArray)] // little endian // MainNet: b9fa24b949d84a8a023fabe9856aa8c543c5a65b
+        // little endian
+        // MainNet: b9fa24b949d84a8a023fabe9856aa8c543c5a65b
+        // TestNet: 2a774fa0404f020254f6db20616cf13adc448d61
+        [InitialValue("1ad744e7f33e3063dde6fa502413af25f3ad6726", ContractParameterType.ByteArray)] // SwitcheoDevNet
         private static readonly byte[] CCMCScriptHash = default;
 
         [InitialValue("NUVHSYuSqAHHNpVyeVR2KkggHNiw5DD2nN", ContractParameterType.Hash160)]
@@ -130,7 +134,7 @@ namespace CrossChainProxy
         public static bool RegisterAsset(byte[] inputBytes, byte[] targetProxyAddress, BigInteger chainId)
         {
             Assert(!IsPaused(), "lock: proxy is paused");
-            Assert(Runtime.CallingScriptHash == (UInt160)CCMCScriptHash, "registerAsset: only allowed to be called by CCMC");
+            Assert(Runtime.CallingScriptHash == (UInt160)CCMCScriptHash, "registerAsset: only allowed to be called by CCMC or owner");
             Assert(chainId == targetChainId, "registerAsset: wrong chain id");
 
             object[] results = DeserializeRegisterAssetArgs(inputBytes);
@@ -162,17 +166,20 @@ namespace CrossChainProxy
             Assert(!IsPaused(), "lock: proxy is paused");
             Assert(fromAssetAddress.Length == 20, "lock: fromAssetAddress must be 20-byte long");
             Assert(fromAddress.Length == 20, "lock: fromAddress must be 20-byte long");
-            Assert(toAddress.Length == 0, "lock: toAddress cannot be empty");
+            Assert(toAddress.Length > 0, "lock: toAddress cannot be empty");
             Assert(amount > 0, "lock: amount must be greater than 0");
             Assert(feeAmount >= 0, "lock: feeAmount must be positive");
-            Assert(feeAmount == 0 || feeAddress.Length > 0, "lock: feeAdress cannot be empty if feeAmount is not zero");
+            Assert(feeAmount == 0 || feeAddress.Length > 0, "lock: feeAddress cannot be empty if feeAmount is not zero");
+            Assert(feeAmount != 0 || feeAddress.Length == 0, "feeAmount cannot be zero if feeAddress is not empty");
             Assert(!fromAddress.Equals(Runtime.ExecutingScriptHash), "lock: can not lock self");
 
             // get the proxy contract on target chain
             var toProxyAddress = GetProxyAddress(fromAssetAddress);
+            Assert(toProxyAddress is not null, "lock: toProxyAddress is not registered");
 
             // get the corresbonding asset on to chain
             var toAssetAddress = GetAssetAddress(fromAssetAddress);
+            Assert(toAssetAddress is not null, "lock: toAssetAddress is not registered");
 
             // transfer asset from fromAddress to proxy contract address, use dynamic call to call nep5 token's contract "transfer"
             bool success = (bool)Contract.Call((UInt160)fromAssetAddress, "transfer", CallFlags.All, new object[] { fromAddress, Runtime.ExecutingScriptHash, amount, null });
@@ -182,7 +189,7 @@ namespace CrossChainProxy
             var inputArgs = SerializeLockArgs((byte[])fromAssetAddress, toAssetAddress, toAddress, amount, feeAmount, feeAddress, (byte[])fromAddress, nonce);
 
             // dynamic call CCMC
-            success = (bool)Contract.Call((UInt160)CCMCScriptHash, "crossChain", CallFlags.All, new object[] { targetChainId, toProxyAddress, "unlock", inputArgs, Runtime.ExecutingScriptHash });
+            success = (bool)Contract.Call((UInt160)CCMCScriptHash, "crossChain", CallFlags.All, new object[] { targetChainId, (byte[])toProxyAddress, "unlock".ToByteArray(), inputArgs });
             Assert(success, "lock: failed to call CCMC");
 
             LockEvent(fromAssetAddress, fromAddress, targetChainId, toAssetAddress, toAddress, amount);
@@ -235,13 +242,15 @@ namespace CrossChainProxy
         // get target proxy contract address according local asset hash
         public static UInt160 GetProxyAddress(UInt160 thisAssetAddress)
         {
-            return (UInt160)Storage.Get(Storage.CurrentContext, proxyAddressPrefix.Concat(thisAssetAddress));
+            UInt160 addr = (UInt160)Storage.Get(Storage.CurrentContext, proxyAddressPrefix.Concat(thisAssetAddress));
+            return addr;
         }
 
         // get target asset contract address according to local asset hash
         public static byte[] GetAssetAddress(UInt160 thisAssetAddress)
         {
-            return (byte[])Storage.Get(Storage.CurrentContext, assetAddressPrefix.Concat(thisAssetAddress));
+            byte[] addr = (byte[])Storage.Get(Storage.CurrentContext, assetAddressPrefix.Concat(thisAssetAddress));
+            return addr;
         }
 
         /*
@@ -348,6 +357,10 @@ namespace CrossChainProxy
                 notify("writeVarInt: value must be positive");
                 throw new ArgumentException();
             }
+            else if (value == 0)
+            {
+                return source.Concat(new byte[] { 0x00 });
+            }
             else if (value < 0xFD)
             {
                 var v = padRight(value.ToByteArray().Take(1), 1);
@@ -373,9 +386,9 @@ namespace CrossChainProxy
             }
         }
 
-        private static byte[] WriteVarBytes(byte[] value, byte[] Source)
+        private static byte[] WriteVarBytes(byte[] value, byte[] source)
         {
-            return writeVarInt(value.Length, Source).Concat(value);
+            return writeVarInt(value.Length, source).Concat(value);
         }
 
         // add padding zeros on the right

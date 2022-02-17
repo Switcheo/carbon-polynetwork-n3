@@ -1,0 +1,13 @@
+{
+  "name": "carbon-polynetwork-n3",
+  "version": "1.0.0",
+  "main": "scripts/index.js",
+  "repository": "git@github.com:Switcheo/carbon-polynetwork-n3.git",
+  "author": "Ivan Poon <ivan.poon@switcheo.network>",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@cityofzion/neon-js": "^5.0.0-next.16",
+    "dotenv": "^16.0.0"
+  }
+}
