@@ -134,7 +134,7 @@ namespace CrossChainProxy
         public static bool RegisterAsset(byte[] inputBytes, byte[] targetProxyAddress, BigInteger chainId)
         {
             Assert(!IsPaused(), "lock: proxy is paused");
-            Assert(Runtime.CallingScriptHash == (UInt160)CCMCScriptHash, "registerAsset: only allowed to be called by CCMC or owner");
+            Assert(Runtime.CallingScriptHash == (UInt160)CCMCScriptHash, "registerAsset: only allowed to be called by CCMC");
             Assert(chainId == targetChainId, "registerAsset: wrong chain id");
 
             object[] results = DeserializeRegisterAssetArgs(inputBytes);
@@ -218,7 +218,7 @@ namespace CrossChainProxy
             Assert((UInt160)fromProxyContract == proxyAddress, "unlock: fromProxyContract is invalid");
 
             var assetAddress = GetAssetAddress(toAssetAddress);
-            Assert(fromAssetAddress == (ByteString)assetAddress, "unlock: toAssetAddress is invalid");
+            Assert(fromAssetAddress == (ByteString)assetAddress, "unlock: fromAssetAddress is invalid");
 
             // transfer asset from proxy contract to toAddress
             bool success = (bool)Contract.Call((UInt160)toAssetAddress, "transfer", CallFlags.All, new object[] { Runtime.ExecutingScriptHash, toAddress, amount, null });

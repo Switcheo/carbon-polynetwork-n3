@@ -16,17 +16,17 @@ For more information, see the [Neo 3.0 docs](https://docs.neo.org/docs/en-us/get
 
 ## Current deployed contracts
 
-### Devnet
+### Testnet
 
-- Address: TBD
-- Big Endian ScriptHash: 0xeeebee7ef57cb2106fbad2c51c5b9b4c30f0c0ca
-- Little Endian ScriptHash: TBD
+- CrossChainManager: [1ad744e7f33e3063dde6fa502413af25f3ad6726](https://neo3.testnet.neotube.io/contract/0x1ad744e7f33e3063dde6fa502413af25f3ad6726)
+- CrossChainProxy: [0xeeebee7ef57cb2106fbad2c51c5b9b4c30f0c0ca](https://neo3.testnet.neotube.io/contract/0xeeebee7ef57cb2106fbad2c51c5b9b4c30f0c0ca)
+- SWTH (NEP-17): [285b332bc0323bc334987bd4735fb39cc3269e20](https://neo3.testnet.neotube.io/contract/0x285b332bc0323bc334987bd4735fb39cc3269e20)
 
 ### Mainnet
 
-- Address: TBD
-- Big Endian ScriptHash: TBD
-- Little Endian ScriptHash: TBD
+- CrossChainManager: TBD
+- CrossChainProxy: TBD
+- SWTH (NEP-17): TBD
 
 ### Legacy Contracts
 

@@ -85,61 +85,60 @@ namespace CrossChainManager
 
         #region Header
         //[Safe]
-        //public static byte[] tryDeserializeHeader(byte[] Source)
+        //public static byte[] tryDeserializeHeader(byte[] source)
         //{
-        //    Header header = deserializeHeader(Source);
+        //    Header header = deserializeHeader(source);
         //    return header.nextBookKeeper;
         //}
 
         /// <summary>
         /// Tested 解析跨链区块头
         /// </summary>
-        /// <param name="Source"></param>
+        /// <param name="source"></param>
         /// <returns></returns>
-        private static Header deserializeHeader(byte[] Source)
+        private static Header deserializeHeader(byte[] source)
         {
             Header header = new Header();
             try
             {
                 int offset = 0;
                 //get version
-                header.version = new BigInteger(Source.Range(offset, 4));
+                header.version = new BigInteger(source.Range(offset, 4));
                 offset += 4;
                 //get chainID
-                header.chainId = new BigInteger(Source.Range(offset, 8));
+                header.chainId = new BigInteger(source.Range(offset, 8));
                 offset += 8;
                 //get prevBlockHash, Hash
-                header.prevBlockHash = readHash(Source, offset);
+                header.prevBlockHash = readHash(source, offset);
                 offset += 32;
                 //get transactionRoot, Hash
-                header.transactionRoot = readHash(Source, offset);
+                header.transactionRoot = readHash(source, offset);
                 offset += 32;
                 //get crossStatesRoot, Hash
-                header.crossStatesRoot = readHash(Source, offset);
+                header.crossStatesRoot = readHash(source, offset);
                 offset += 32;
                 //get blockRoot, Hash
-                header.blockRoot = readHash(Source, offset);
+                header.blockRoot = readHash(source, offset);
                 offset += 32;
                 //get timeStamp,uint32
-                header.timeStamp = new BigInteger(Source.Range(offset, 4));
+                header.timeStamp = new BigInteger(source.Range(offset, 4));
                 offset += 4;
                 //get height
-                header.height = new BigInteger(Source.Range(offset, 4));
+                header.height = new BigInteger(source.Range(offset, 4));
                 offset += 4;
                 //get consensusData
-                header.ConsensusData = new BigInteger(Source.Range(offset, 8));
+                header.ConsensusData = new BigInteger(source.Range(offset, 8));
                 offset += 8;
                 //get consensysPayload
                 ByteString rawPayload;
-                (rawPayload, offset) = readVarBytes(Source, offset);
+                (rawPayload, offset) = readVarBytes(source, offset);
                 header.consensusPayload = (byte[])rawPayload;
                 //get nextBookKeeper
-                header.nextBookKeeper = Source.Range(offset, 20);
+                header.nextBookKeeper = source.Range(offset, 20);
             }
             catch
             {
-                notify("deserialize header failed");
-                throw new ArgumentException();
+                throw new ArgumentException("deserialize header failed");
             }
             notify("deserialize header success");
             return header;
@@ -163,20 +162,17 @@ namespace CrossChainManager
             BigInteger latestHeight = new BigInteger(((byte[])Storage.Get(Storage.CurrentContext, currentEpochHeightPrefix)).Concat(new byte[] { 0x00 }));
             if (latestHeight > header.height)
             {
-                notify("The height of header illegal");
-                return false;
+                throw new Exception("The height of header illegal");
             }
             ECPoint[] keepers = (ECPoint[])StdLib.Deserialize(Storage.Get(Storage.CurrentContext, mCKeeperPubKeysPrefix));
             if (!verifySigWithOrder(rawHeader, signList, keepers))
             {
-                notify("Verify signature failed");
-                return false;
+                throw new Exception("Verify signature failed");
             }
             BookKeeper bookKeeper = verifyPubkey(pubKeyList);
             if ((ByteString)header.nextBookKeeper != (ByteString)bookKeeper.nextBookKeeper)
             {
-                notify("bookKeeper not match");
-                throw new Exception();
+                throw new Exception("nextBookKeeper does not match");
             }
             Storage.Put(Storage.CurrentContext, currentEpochHeightPrefix, header.height);
             Storage.Put(Storage.CurrentContext, mCKeeperPubKeysPrefix, StdLib.Serialize(bookKeeper.keepers));
@@ -194,13 +190,17 @@ namespace CrossChainManager
             if (isGenesised()) return false;
             if (pubKeyList.Length % MCCHAIN_PUBKEY_LEN != 0 && pubKeyList.Length != 0)
             {
-                notify("Length of pubKeyList is illegal");
-                throw new ArgumentException();
+                throw new ArgumentException("Length of pubKeyList is illegal");
             }
             BookKeeper bookKeeper = verifyPubkey(pubKeyList);
+            if ((ByteString)header.nextBookKeeper != (ByteString)bookKeeper.nextBookKeeper)
+            {
+                throw new Exception("header.nextBookKeeper does not match bookKeeper.nextBookKeeper");
+            }
             Storage.Put(Storage.CurrentContext, currentEpochHeightPrefix, header.height);
             Storage.Put(Storage.CurrentContext, isGenesisedKey, 1);
             Storage.Put(Storage.CurrentContext, mCKeeperPubKeysPrefix, StdLib.Serialize(bookKeeper.keepers));
+            notify("initGenesisBlock successful");
             return true;
         }
 
@@ -219,8 +219,7 @@ namespace CrossChainManager
         {
             if (pubKeyList.Length % MCCHAIN_PUBKEY_LEN != 0)
             {
-                notify("pubKeyList length illegal");
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException("pubKeyList length illegal");
             }
             int n = pubKeyList.Length / MCCHAIN_PUBKEY_LEN;
             int m = n - (n - 1) / 3;
@@ -326,8 +325,7 @@ namespace CrossChainManager
             }
             catch
             {
-                notify("Header deserialize failed");
-                throw new Exception();
+                throw new Exception("deserializeHeader failed");
             }
             ECPoint[] keepers = (ECPoint[])StdLib.Deserialize(Storage.Get(Storage.CurrentContext, mCKeeperPubKeysPrefix));
             BigInteger currentEpochHeight = (BigInteger)Storage.Get(Storage.CurrentContext, currentEpochHeightPrefix);
@@ -356,8 +354,7 @@ namespace CrossChainManager
                 }
                 catch
                 {
-                    notify("CR Header deserialize Failed");
-                    throw new Exception();
+                    throw new Exception("currentHeader deserializeHeader failed");
                 }
                 StateRootValue = merkleProve(headerProof, currentHeader.blockRoot);
                 ByteString RawHeaderHash = (ByteString)Hash256(RawHeader);
@@ -525,11 +522,11 @@ namespace CrossChainManager
             return result;
         }
 
-        //public static bool tryDeserializeMerkleValue(byte[] Source)
+        //public static bool tryDeserializeMerkleValue(byte[] source)
         //{
         //    try
         //    {
-        //        ToMerkleValue result = deserializMerkleValue(Source);
+        //        ToMerkleValue result = deserializMerkleValue(source);
         //        return true;
         //    }
         //    catch
@@ -541,9 +538,9 @@ namespace CrossChainManager
         /// <summary>
         /// Tested, 反序列化MerkleValue
         /// </summary>
-        /// <param name="Source"></param>
+        /// <param name="source"></param>
         /// <returns></returns>
-        private static ToMerkleValue deserializMerkleValue(byte[] Source)
+        private static ToMerkleValue deserializMerkleValue(byte[] source)
         {
             int offset = 0;
             try
@@ -551,15 +548,15 @@ namespace CrossChainManager
                 ToMerkleValue result = new ToMerkleValue();
                 //get txHash
                 ByteString rawTxHash;
-                (rawTxHash, offset) = readVarBytes(Source, offset);
+                (rawTxHash, offset) = readVarBytes(source, offset);
                 result.txHash = (byte[])rawTxHash;
 
                 //get fromChainID, Uint64
-                result.fromChainID = Source.Range(offset, 8);
+                result.fromChainID = source.Range(offset, 8);
                 offset = offset + 8;
 
                 //get CrossChainTxParameter
-                result.TxParam = deserializCrossChainTxParameter(Source, offset);
+                result.TxParam = deserializCrossChainTxParameter(source, offset);
                 return result;
             }
             catch
@@ -571,44 +568,44 @@ namespace CrossChainManager
         /// <summary>
         /// Tested, 反序列化跨链交易参数
         /// </summary>
-        /// <param name="Source"></param>
+        /// <param name="source"></param>
         /// <param name="offset"></param>
         /// <returns></returns>
-        private static CrossChainTxParameter deserializCrossChainTxParameter(byte[] Source, int offset)
+        private static CrossChainTxParameter deserializCrossChainTxParameter(byte[] source, int offset)
         {
             CrossChainTxParameter txParameter = new CrossChainTxParameter();
             //get txHash
             ByteString rawTxParameter;
-            (rawTxParameter, offset) = readVarBytes(Source, offset);
+            (rawTxParameter, offset) = readVarBytes(source, offset);
             txParameter.txHash = (byte[])rawTxParameter;
 
             //get crossChainId
             ByteString rawCrossChainId;
-            (rawCrossChainId, offset) = readVarBytes(Source, offset);
+            (rawCrossChainId, offset) = readVarBytes(source, offset);
             txParameter.crossChainID = (byte[])rawCrossChainId;
 
             //get fromContract
             ByteString rawFromContract;
-            (rawFromContract, offset) = readVarBytes(Source, offset);
+            (rawFromContract, offset) = readVarBytes(source, offset);
             txParameter.fromContract = (byte[])rawFromContract;
 
             //get toChainID
-            txParameter.toChainID = Source.Range(offset, 8);
+            txParameter.toChainID = source.Range(offset, 8);
             offset = offset + 8;
 
             //get toContract
             ByteString rawToContract;
-            (rawToContract, offset) = readVarBytes(Source, offset);
+            (rawToContract, offset) = readVarBytes(source, offset);
             txParameter.toContract = (byte[])rawToContract;
 
             //get method
             ByteString rawMethod;
-            (rawMethod, offset) = readVarBytes(Source, offset);
+            (rawMethod, offset) = readVarBytes(source, offset);
             txParameter.method = (byte[])rawMethod;
 
             //get params
             ByteString rawArgs;
-            (rawArgs, offset) = readVarBytes(Source, offset);
+            (rawArgs, offset) = readVarBytes(source, offset);
             txParameter.args = (byte[])rawArgs;
             return txParameter;
         }
@@ -691,15 +688,15 @@ namespace CrossChainManager
         /// <summary>
         /// Tested, 包含在deserializeHeader中
         /// </summary>
-        /// <param name="Source"></param>
+        /// <param name="source"></param>
         /// <param name="offset"></param>
         /// <returns></returns>
         [Safe]
-        public static byte[] readHash(byte[] Source, int offset)
+        public static byte[] readHash(byte[] source, int offset)
         {
-            if (offset + 32 <= Source.Length)
+            if (offset + 32 <= source.Length)
             {
-                return Source.Range(offset, 32);
+                return source.Range(offset, 32);
             }
             throw new ArgumentOutOfRangeException();
         }
@@ -718,7 +715,7 @@ namespace CrossChainManager
         }
 
         /// <summary>
-        /// Tested, 返回Source + Content 的字节，Content包含长度
+        /// Tested, 返回source + Content 的字节，Content包含长度
         /// </summary>
         /// <param name="source"></param>
         /// <param name="content"></param>
@@ -781,8 +778,7 @@ namespace CrossChainManager
         {
             if (value < 0)
             {
-                notify("WVI: value should be positive");
-                throw new ArgumentException();
+                throw new ArgumentException("WVI: value should be positive");
             }
             else if (value < 0xFD)
             {
@@ -821,8 +817,7 @@ namespace CrossChainManager
         {
             if (offset + count > buffer.Length)
             {
-                notify("read Bytes fail");
-                throw new ArgumentException();
+                throw new ArgumentException("readBytes buffer too short");
             }
             return ((ByteString)buffer.Range(offset, count), offset + count);
 
@@ -840,8 +835,7 @@ namespace CrossChainManager
             var l = value.Length;
             if (l > length)
             {
-                notify("size exceed");
-                throw new ArgumentException();
+                throw new ArgumentException("padRight length exceeded");
             }
             for (int i = 0; i < length - l; i++)
             {
@@ -850,15 +844,15 @@ namespace CrossChainManager
             return value;
         }
         [Safe]
-        private static byte[] bytesToBytes20(byte[] Source)
+        private static byte[] bytesToBytes20(byte[] source)
         {
-            if (Source.Length != 20)
+            if (source.Length != 20)
             {
                 throw new ArgumentOutOfRangeException();
             }
             else
             {
-                return Source;
+                return source;
             }
         }
 
