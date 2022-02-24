@@ -19,8 +19,8 @@ namespace CrossChainProxy
     {
 
         // little endian
-        // MainNet: b9fa24b949d84a8a023fabe9856aa8c543c5a65b
-        // TestNet: 2a774fa0404f020254f6db20616cf13adc448d61
+        // MainNet: 0x5ba6c543c5a86a85e9ab3f028a4ad849b924fab9
+        // TestNet: 0x618d44dc3af16c6120dbf65402024f40a04f772a
         [InitialValue("0x1ad744e7f33e3063dde6fa502413af25f3ad6726", ContractParameterType.Hash160)] // SwitcheoDevNet
         private static readonly byte[] CCMCScriptHash = default;
 
@@ -133,9 +133,9 @@ namespace CrossChainProxy
 
         public static bool RegisterAsset(byte[] inputBytes, byte[] targetProxyAddress, BigInteger chainId)
         {
-            Assert(!IsPaused(), "lock: proxy is paused");
+            Assert(!IsPaused(), "registerAsset: proxy is paused");
             Assert(Runtime.CallingScriptHash == (UInt160)CCMCScriptHash, "registerAsset: only allowed to be called by CCMC");
-            Assert(chainId == targetChainId, "registerAsset: wrong chain id");
+            Assert(IsValidChainId(chainId), "registerAsset: wrong chain id");
 
             object[] results = DeserializeRegisterAssetArgs(inputBytes);
             byte[] targetAssetAddress = (byte[])results[0];
@@ -170,7 +170,7 @@ namespace CrossChainProxy
             Assert(amount > 0, "lock: amount must be greater than 0");
             Assert(feeAmount >= 0, "lock: feeAmount must be positive");
             Assert(feeAmount == 0 || feeAddress.Length > 0, "lock: feeAddress cannot be empty if feeAmount is not zero");
-            Assert(feeAmount != 0 || feeAddress.Length == 0, "feeAmount cannot be zero if feeAddress is not empty");
+            Assert(feeAmount != 0 || feeAddress.Length == 0, "lock: feeAmount cannot be zero if feeAddress is not empty");
             Assert(!fromAddress.Equals(Runtime.ExecutingScriptHash), "lock: can not lock self");
 
             // get the proxy contract on target chain
@@ -199,9 +199,9 @@ namespace CrossChainProxy
         // Methods of actual execution, used to unlock asset from proxy contract
         public static bool Unlock(byte[] inputBytes, byte[] fromProxyContract, BigInteger chainId)
         {
-            Assert(!IsPaused(), "lock: proxy is paused");
+            Assert(!IsPaused(), "unlock: proxy is paused");
             Assert(Runtime.CallingScriptHash == (UInt160)CCMCScriptHash, "unlock: only allowed to be called by CCMC");
-            Assert(chainId == targetChainId, "registerAsset: wrong chain id");
+            Assert(IsValidChainId(chainId), "unlock: wrong chain id");
             Assert(fromProxyContract.Length > 0, "unlock: fromProxyContract cannot be empty");
 
             // parse the args bytes constructed in source chain proxy contract, passed by multi-chain
@@ -214,11 +214,11 @@ namespace CrossChainProxy
             Assert(toAddress.Length == 20, "unlock: toAddress must be 20-byte long");
             Assert(amount > 0, "unlock: amount must be greater than 0");
 
-            var proxyAddress = GetProxyAddress(toAssetAddress);
+            UInt160 proxyAddress = GetProxyAddress(toAssetAddress);
             Assert((UInt160)fromProxyContract == proxyAddress, "unlock: fromProxyContract is invalid");
 
-            var assetAddress = GetAssetAddress(toAssetAddress);
-            Assert(fromAssetAddress == (ByteString)assetAddress, "unlock: fromAssetAddress is invalid");
+            byte[] assetAddress = GetAssetAddress(toAssetAddress);
+            Assert(fromAssetAddress.Equals((ByteString)assetAddress), "unlock: fromAssetAddress is invalid");
 
             // transfer asset from proxy contract to toAddress
             bool success = (bool)Contract.Call((UInt160)toAssetAddress, "transfer", CallFlags.All, new object[] { Runtime.ExecutingScriptHash, toAddress, amount, null });
@@ -251,6 +251,11 @@ namespace CrossChainProxy
         {
             byte[] addr = (byte[])Storage.Get(Storage.CurrentContext, assetAddressPrefix.Concat(thisAssetAddress));
             return addr;
+        }
+
+        public static bool IsValidChainId(BigInteger chainId)
+        {
+            return ((ByteString)padRight(chainId.ToByteArray(), 8)).Equals((ByteString)padRight(targetChainId.ToByteArray(), 8));
         }
 
         /*
