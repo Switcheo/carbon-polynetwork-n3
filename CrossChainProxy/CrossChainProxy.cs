@@ -21,7 +21,7 @@ namespace CrossChainProxy
         // little endian
         // MainNet: b9fa24b949d84a8a023fabe9856aa8c543c5a65b
         // TestNet: 2a774fa0404f020254f6db20616cf13adc448d61
-        [InitialValue("1ad744e7f33e3063dde6fa502413af25f3ad6726", ContractParameterType.ByteArray)] // SwitcheoDevNet
+        [InitialValue("0x1ad744e7f33e3063dde6fa502413af25f3ad6726", ContractParameterType.Hash160)] // SwitcheoDevNet
         private static readonly byte[] CCMCScriptHash = default;
 
         [InitialValue("NUVHSYuSqAHHNpVyeVR2KkggHNiw5DD2nN", ContractParameterType.Hash160)]
@@ -32,7 +32,7 @@ namespace CrossChainProxy
         private static readonly byte[] proxyAddressPrefix = new byte[] { 0x01, 0x04 };
         private static readonly byte[] assetAddressPrefix = new byte[] { 0x01, 0x05 };
         private static readonly BigInteger thisChainId = 88; // MainNet: 14
-        private static readonly BigInteger targetChainId = 198; // MainNet: 5
+        private static readonly BigInteger targetChainId = 199; // MainNet: 5
 
         // Events
         public static event Action<byte[], UInt160> DeployEvent;
@@ -138,8 +138,8 @@ namespace CrossChainProxy
             Assert(chainId == targetChainId, "registerAsset: wrong chain id");
 
             object[] results = DeserializeRegisterAssetArgs(inputBytes);
-            var targetAssetAddress = (byte[])results[0];
-            var thisAssetAddress = (UInt160)results[1];
+            byte[] targetAssetAddress = (byte[])results[0];
+            UInt160 thisAssetAddress = (UInt160)results[1];
 
             Assert(targetAssetAddress.Length > 0, "registerAsset: target asset address is empty");
             Assert(thisAssetAddress.Length == 20, "registerAsset: thisAssetAddress must be 20-byte long");
@@ -147,8 +147,8 @@ namespace CrossChainProxy
             BigInteger balance = GetAssetBalance(thisAssetAddress);
 
             // Make sure not already registered
-            Assert(GetAssetAddress(thisAssetAddress).Length == 0, "registerAsset: asset address already registered");
-            Assert(GetProxyAddress(thisAssetAddress).Length == 0, "registerAsset: proxy address already registered");
+            Assert(GetAssetAddress(thisAssetAddress) is not null, "registerAsset: asset address already registered");
+            Assert(GetProxyAddress(thisAssetAddress) is not null, "registerAsset: proxy address already registered");
 
             // add mapping for this asset => target address
             Storage.Put(Storage.CurrentContext, assetAddressPrefix.Concat(thisAssetAddress), targetAssetAddress);

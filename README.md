@@ -18,9 +18,9 @@ For more information, see the [Neo 3.0 docs](https://docs.neo.org/docs/en-us/get
 
 ### Testnet
 
-- CrossChainManager: [1ad744e7f33e3063dde6fa502413af25f3ad6726](https://neo3.testnet.neotube.io/contract/0x1ad744e7f33e3063dde6fa502413af25f3ad6726)
+- CrossChainManager: [0x1ad744e7f33e3063dde6fa502413af25f3ad6726](https://neo3.testnet.neotube.io/contract/0x1ad744e7f33e3063dde6fa502413af25f3ad6726)
 - CrossChainProxy: [0xeeebee7ef57cb2106fbad2c51c5b9b4c30f0c0ca](https://neo3.testnet.neotube.io/contract/0xeeebee7ef57cb2106fbad2c51c5b9b4c30f0c0ca)
-- SWTH (NEP-17): [285b332bc0323bc334987bd4735fb39cc3269e20](https://neo3.testnet.neotube.io/contract/0x285b332bc0323bc334987bd4735fb39cc3269e20)
+- SWTH (NEP-17): [0x285b332bc0323bc334987bd4735fb39cc3269e20](https://neo3.testnet.neotube.io/contract/0x285b332bc0323bc334987bd4735fb39cc3269e20)
 
 ### Mainnet
 
