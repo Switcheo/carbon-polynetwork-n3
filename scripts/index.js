@@ -11,9 +11,9 @@ const fromAccount = new wallet.Account(
 const toAccount = u.HexString.fromHex(process.env.CARBON_WALLET_ADDRESS, true)
 
 // const tokenScriptHash = CONST.NATIVE_CONTRACT_HASH.NeoToken
-const tokenScriptHash = "285b332bc0323bc334987bd4735fb39cc3269e20" // SWTH
+const tokenScriptHash = "285b332bc0323bc334987bd4735fb39cc3269e20" // SWTH | MainNet: 78e1330db47634afdb5ea455302ba2d12b8d549f
 const managerScriptHash = "1ad744e7f33e3063dde6fa502413af25f3ad6726"
-const lockProxyScriptHash = "eeebee7ef57cb2106fbad2c51c5b9b4c30f0c0ca"
+const lockProxyScriptHash = "eeebee7ef57cb2106fbad2c51c5b9b4c30f0c0ca" // MainNet: 974ea0aaec75ed15d80cc0b6077479ab0e8e0e6f
 
 const initGenesis = async () => {
   await fromAccount.decrypt(process.env.NEO_WALLET_PASSWORD)
@@ -29,7 +29,22 @@ const initGenesis = async () => {
   )
   tx = await checkNetworkFee(0, tx)
   tx = await checkSystemFee(0, fromAccount, tx)
-  // tx = await checkBalance(fromAccount, tokenScriptHash, 1, tx)
+  await performTransaction(fromAccount, tx)
+}
+
+const addBridge = async () => {
+  await fromAccount.decrypt(process.env.NEO_WALLET_PASSWORD)
+  let tx = await createTransaction(
+    tokenScriptHash,
+    "addBridge",
+    [
+      sc.ContractParam.hash160(lockProxyScriptHash),
+    ],
+    fromAccount,
+  )
+  // await checkToken(tokenScriptHash)
+  tx = await checkNetworkFee(0, tx)
+  tx = await checkSystemFee(0, fromAccount, tx)
   await performTransaction(fromAccount, tx)
 }
 

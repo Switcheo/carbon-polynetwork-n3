@@ -21,10 +21,12 @@ namespace CrossChainProxy
         // little endian
         // MainNet: 0x5ba6c543c5a86a85e9ab3f028a4ad849b924fab9
         // TestNet: 0x618d44dc3af16c6120dbf65402024f40a04f772a
-        [InitialValue("0x1ad744e7f33e3063dde6fa502413af25f3ad6726", ContractParameterType.Hash160)] // SwitcheoDevNet
+        // SwitcheoDevNet: 0x1ad744e7f33e3063dde6fa502413af25f3ad6726
+        [InitialValue("0x5ba6c543c5a86a85e9ab3f028a4ad849b924fab9", ContractParameterType.Hash160)] // SwitcheoDevNet
         private static readonly byte[] CCMCScriptHash = default;
 
-        [InitialValue("NUVHSYuSqAHHNpVyeVR2KkggHNiw5DD2nN", ContractParameterType.Hash160)]
+        // SwitcheoDevNet: NUVHSYuSqAHHNpVyeVR2KkggHNiw5DD2nN
+        [InitialValue("NUmfDHK5qeaHhsLwjB5quxAHCL7zsx2VcT", ContractParameterType.Hash160)]
         private static readonly UInt160 owner = default;
         private static readonly byte[] ownerKey = new byte[] { 0x01, 0x01 };
         private static readonly byte[] operatorKey = new byte[] { 0x01, 0x02 };

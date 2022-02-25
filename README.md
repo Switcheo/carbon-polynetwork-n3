@@ -14,6 +14,13 @@ This is the repository contains the  Neo (3.0) deposit and wrapped native token 
 
 For more information, see the [Neo 3.0 docs](https://docs.neo.org/docs/en-us/gettingstarted/develop.html).
 
+### Alternate Deployment
+
+Using deployer project:
+
+1. `dotnet build`
+2. `CONTRACT_NAME=CrossChainProxy DEPLOYER_PKEY=xxx dotnet Deployer/bin/Debug/net6.0/Deployer.dll`
+
 ## Current deployed contracts
 
 ### Testnet
@@ -24,9 +31,9 @@ For more information, see the [Neo 3.0 docs](https://docs.neo.org/docs/en-us/get
 
 ### Mainnet
 
-- CrossChainManager: TBD
-- CrossChainProxy: TBD
-- SWTH (NEP-17): TBD
+- CrossChainManager: N/A
+- CrossChainProxy: [0x974ea0aaec75ed15d80cc0b6077479ab0e8e0e6f](https://dora.coz.io/contract/neo3/mainnet/0x974ea0aaec75ed15d80cc0b6077479ab0e8e0e6f)
+- SWTH (NEP-17): [0x78e1330db47634afdb5ea455302ba2d12b8d549f](https://dora.coz.io/contract/neo3/mainnet/0x78e1330db47634afdb5ea455302ba2d12b8d549f)
 
 ### Legacy Contracts
 

@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrossChainProxy", "CrossCha
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrossChainManager", "CrossChainManager\CrossChainManager.csproj", "{A08D5133-6E0E-4A01-BA43-B1FD63DA995D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Deployer", "Deployer\Deployer.csproj", "{5E07950D-2F61-403F-87D8-0B20A99A1F2D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{A08D5133-6E0E-4A01-BA43-B1FD63DA995D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A08D5133-6E0E-4A01-BA43-B1FD63DA995D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A08D5133-6E0E-4A01-BA43-B1FD63DA995D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E07950D-2F61-403F-87D8-0B20A99A1F2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E07950D-2F61-403F-87D8-0B20A99A1F2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E07950D-2F61-403F-87D8-0B20A99A1F2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E07950D-2F61-403F-87D8-0B20A99A1F2D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
