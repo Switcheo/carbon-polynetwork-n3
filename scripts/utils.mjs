@@ -1,8 +1,8 @@
 
 import { CONST, rpc, sc, tx, u } from "@cityofzion/neon-core";
 
-export const MAGIC_NUMBER = CONST.MAGIC_NUMBER.TestNet
-export const rpcClient = new rpc.RPCClient("http://127.0.0.1:20332");
+export const MAGIC_NUMBER = CONST.MAGIC_NUMBER.MainNet
+export const rpcClient = new rpc.RPCClient("http://seed1.neo.org:10332");
 export const scopes = tx.WitnessScope.Global
 
 export async function createTransaction(scriptHash, operation, args, fromAccount) {

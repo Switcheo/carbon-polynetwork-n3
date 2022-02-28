@@ -32,7 +32,7 @@ Using deployer project:
 ### Mainnet
 
 - CrossChainManager: N/A
-- CrossChainProxy: [0x974ea0aaec75ed15d80cc0b6077479ab0e8e0e6f](https://dora.coz.io/contract/neo3/mainnet/0x974ea0aaec75ed15d80cc0b6077479ab0e8e0e6f)
+- CrossChainProxy: [0x8eb3bdf5ed4ac1516d316c6b1b207a3cf5eb7567](https://dora.coz.io/contract/neo3/mainnet/0x8eb3bdf5ed4ac1516d316c6b1b207a3cf5eb7567)
 - SWTH (NEP-17): [0x78e1330db47634afdb5ea455302ba2d12b8d549f](https://dora.coz.io/contract/neo3/mainnet/0x78e1330db47634afdb5ea455302ba2d12b8d549f)
 
 ### Legacy Contracts

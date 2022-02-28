@@ -33,8 +33,8 @@ namespace CrossChainProxy
         private static readonly byte[] pauseKey = new byte[] { 0x01, 0x03 };
         private static readonly byte[] proxyAddressPrefix = new byte[] { 0x01, 0x04 };
         private static readonly byte[] assetAddressPrefix = new byte[] { 0x01, 0x05 };
-        private static readonly BigInteger thisChainId = 88; // MainNet: 14
-        private static readonly BigInteger targetChainId = 199; // MainNet: 5
+        private static readonly BigInteger thisChainId = 14; // TestNet: 88 | MainNet: 14
+        private static readonly BigInteger targetChainId = 5; // SwitcheoDevNet: 199 | MainNet: 5
 
         // Events
         public static event Action<byte[], UInt160> DeployEvent;
@@ -149,8 +149,8 @@ namespace CrossChainProxy
             BigInteger balance = GetAssetBalance(thisAssetAddress);
 
             // Make sure not already registered
-            Assert(GetAssetAddress(thisAssetAddress) is not null, "registerAsset: asset address already registered");
-            Assert(GetProxyAddress(thisAssetAddress) is not null, "registerAsset: proxy address already registered");
+            Assert(GetAssetAddress(thisAssetAddress) is null, "registerAsset: asset address already registered");
+            Assert(GetProxyAddress(thisAssetAddress) is null, "registerAsset: proxy address already registered");
 
             // add mapping for this asset => target address
             Storage.Put(Storage.CurrentContext, assetAddressPrefix.Concat(thisAssetAddress), targetAssetAddress);
