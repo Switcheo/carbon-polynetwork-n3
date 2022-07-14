@@ -151,7 +151,7 @@ namespace BridgeEntrance
 
             // get asset denom
             var fromAssetDenom = GetAssetAddress(fromAssetAddress);
-           Assert(fromAssetDenom is not null, "lock: toAssetAddress is not registered");
+            Assert(fromAssetDenom is not null, "lock: fromAssetDenom is not registered");
 
             // transfer asset from fromAddress to proxy contract address, use dynamic call to call nep17 token's contract "transfer"
             bool success = (bool)Contract.Call((UInt160)fromAssetAddress, "transfer", CallFlags.All, new object[] { fromAddress, Runtime.ExecutingScriptHash, callAmount, null });
