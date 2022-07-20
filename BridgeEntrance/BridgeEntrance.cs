@@ -34,7 +34,6 @@ namespace BridgeEntrance
 
         // SwitcheoDevNet: NUVHSYuSqAHHNpVyeVR2KkggHNiw5DD2nN
         // Mainnet: NUmfDHK5qeaHhsLwjB5quxAHCL7zsx2VcT
-        // hx: NQRWwjMnDXioWGeCTk1RQtDAgjbQuXF5U7
         [InitialValue("NUmfDHK5qeaHhsLwjB5quxAHCL7zsx2VcT", ContractParameterType.Hash160)]
         private static readonly UInt160 owner = default;
 
