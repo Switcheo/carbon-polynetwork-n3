@@ -129,7 +129,7 @@ namespace BridgeEntrance
         * Cross-chain
         */
 
-        public static bool Lock(UInt160 fromAssetAddress, UInt160 fromAddress, byte[] recoveryAddress, byte[] toAssetDenom, byte[] toAddress, BigInteger amount, BigInteger feeAmount, BigInteger callAmount, byte[] feeAddress)
+        public static bool Lock(UInt160 fromAssetAddress, UInt160 fromAddress, byte[] recoveryAddress, byte[] toAssetDenom, byte[] toAddress, BigInteger amount, BigInteger feeAmount, byte[] feeAddress)
         {
             Assert(!IsPaused(), "lock: proxy is paused");
             Assert(fromAssetAddress.Length == 20, "lock: fromAssetAddress must be 20-byte long");
@@ -138,7 +138,6 @@ namespace BridgeEntrance
             Assert(toAssetDenom.Length > 0, "lock: toAssetDenom cannot be empty");
             Assert(toAddress.Length > 0, "lock: toAddress cannot be empty");
             Assert(amount > 0, "lock: amount must be greater than 0");
-            Assert(callAmount > 0, "lock: callAmount must be greater than 0");
             Assert(feeAmount >= 0, "lock: feeAmount must be positive");
             Assert(feeAmount == 0 || feeAddress.Length > 0, "lock: feeAddress cannot be empty if feeAmount is not zero");
             Assert(feeAmount != 0 || feeAddress.Length == 0, "lock: feeAmount cannot be zero if feeAddress is not empty");
@@ -153,7 +152,7 @@ namespace BridgeEntrance
             Assert(fromAssetDenom is not null, "lock: fromAssetDenom is not registered");
 
             // transfer asset from fromAddress to proxy contract address, use dynamic call to call nep17 token's contract "transfer"
-            bool success = (bool)Contract.Call((UInt160)fromAssetAddress, "transfer", CallFlags.All, new object[] { fromAddress, (UInt160)LockProxyHash, callAmount, null });
+            bool success = (bool)Contract.Call((UInt160)fromAssetAddress, "transfer", CallFlags.All, new object[] { fromAddress, (UInt160)LockProxyHash, amount, null });
             Assert(success, "lock: failed to transfer NEP17 token to BridgeEntrance");
 
             // construct args for ccm call
